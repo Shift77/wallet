@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: sh -c "python manage.py wait_for_db && python manage.py migrate && python manage.py collectstatic --no-input && gunicorn --bind 0.0.0.0:8000 wallet.wsgi:application"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_ENGINE=django.db.backends.mysql
+      - DB_NAME=wallet_db
+      - DB_USER=wallet_user
+      - DB_PASSWORD=wallet_password
+      - DB_HOST=db
+      - DB_PORT=3306
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - THIRD_PARTY_BASE_URL=http://third-party:8010
+      - DEBUG=1
+    depends_on:
+      - db
+      - redis
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: sh -c "python manage.py wait_for_db && celery -A wallet worker -l info"
+    volumes:
+      - .:/app
+    environment:
+      - DB_ENGINE=django.db.backends.mysql
+      - DB_NAME=wallet_db
+      - DB_USER=wallet_user
+      - DB_PASSWORD=wallet_password
+      - DB_HOST=db
+      - DB_PORT=3306
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - THIRD_PARTY_BASE_URL=http://third-party:8010
+    depends_on:
+      - db
+      - redis
+      - backend
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: sh -c "python manage.py wait_for_db && celery -A wallet beat -l info"
+    volumes:
+      - .:/app
+    environment:
+      - DB_ENGINE=django.db.backends.mysql
+      - DB_NAME=wallet_db
+      - DB_USER=wallet_user
+      - DB_PASSWORD=wallet_password
+      - DB_HOST=db
+      - DB_PORT=3306
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - THIRD_PARTY_BASE_URL=http://third-party:8010
+    depends_on:
+      - db
+      - redis
+      - backend
+
+  third-party:
+    build:
+      context: ./third-party
+      dockerfile: Dockerfile
+    command: python app.py
+    ports:
+      - "8010:8010"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_DATABASE: wallet_db
+      MYSQL_USER: wallet_user
+      MYSQL_PASSWORD: wallet_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:

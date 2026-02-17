@@ -17,7 +17,7 @@ class Wallet(BaseModel):
     uuid = models.UUIDField(
         default=uuid.uuid4, unique=True, editable=False, db_index=True
     )
-    balance = models.BigIntegerField(default=0)
+    balance = models.PositiveBigIntegerField(default=0)
 
     def __str__(self):
         return f"Wallet {self.uuid} (balance={self.balance})"
