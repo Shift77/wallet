@@ -51,6 +51,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "wallets.middleware.RequestResponseLoggingMiddleware",
 ]
 
 ROOT_URLCONF = "wallet.urls"
@@ -191,12 +192,17 @@ WITHDRAWAL_MAX_RETRIES = 3
 # Logging
 # ============================================================
 
+LOG_DIR = BASE_DIR / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+
+from datetime import date
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
-            "format": "{asctime} {levelname} {name} {message}",
+            "format": "{asctime} {levelname} {name} {module} {funcName} {message}",
             "style": "{",
         },
     },
@@ -205,15 +211,24 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "verbose",
         },
+        "file": {
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "filename": LOG_DIR / f"{date.today().isoformat()}.log",
+            "when": "midnight",
+            "interval": 1,
+            "backupCount": 30,
+            "formatter": "verbose",
+            "encoding": "utf-8",
+        },
     },
     "root": {
-        "handlers": ["console"],
+        "handlers": ["console", "file"],
         "level": "INFO",
     },
     "loggers": {
-        "wallets": {
-            "handlers": ["console"],
-            "level": "DEBUG",
+        "django": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
             "propagate": False,
         },
     },

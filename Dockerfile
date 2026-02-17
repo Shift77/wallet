@@ -18,4 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt && \
 
 COPY . .
 
+# Create logs directory with proper permissions
+RUN mkdir -p /app/logs && chmod 777 /app/logs
+
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "wallet.wsgi:application"]

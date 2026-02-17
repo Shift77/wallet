@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   backend:
@@ -29,7 +28,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: sh -c "python manage.py wait_for_db && celery -A wallet worker -l info"
+    command: sh -c "python manage.py wait_for_db && celery -A wallet worker -l info --logfile=/app/logs/celery-worker.log"
     volumes:
       - .:/app
     environment:
@@ -46,12 +45,13 @@ services:
       - db
       - redis
       - backend
+      - third-party
 
   celery-beat:
     build:
       context: .
       dockerfile: Dockerfile
-    command: sh -c "python manage.py wait_for_db && celery -A wallet beat -l info"
+    command: sh -c "python manage.py wait_for_db && celery -A wallet beat -l info --logfile=/app/logs/celery-beat.log"
     volumes:
       - .:/app
     environment:
@@ -68,12 +68,14 @@ services:
       - db
       - redis
       - backend
+      - third-party
 
   third-party:
     build:
       context: ./third-party
       dockerfile: Dockerfile
     command: python app.py
+    restart: on-failure
     ports:
       - "8010:8010"
 
